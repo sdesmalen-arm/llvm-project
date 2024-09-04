@@ -5195,7 +5195,8 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
   SMEAttrs CallerAttrs(*FuncInfo.Fn);
   if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
       CallerAttrs.hasStreamingInterfaceOrBody() ||
-      CallerAttrs.hasStreamingCompatibleInterface())
+      CallerAttrs.hasStreamingCompatibleInterface() ||
+      CallerAttrs.hasAgnosticZAInterface())
     return nullptr;
   return new AArch64FastISel(FuncInfo, LibInfo);
 }

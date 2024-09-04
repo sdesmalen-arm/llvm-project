@@ -3017,6 +3017,11 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_za_disable
       : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
+  def int_aarch64_sme_save
+      : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [IntrNoMem, IntrHasSideEffects]>;
+  def int_aarch64_sme_restore
+      : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [IntrNoMem, IntrHasSideEffects]>;
+
   // Clamp
   //
 
