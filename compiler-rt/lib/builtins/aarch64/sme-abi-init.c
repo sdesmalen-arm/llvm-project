@@ -48,3 +48,8 @@ __attribute__((constructor(90)))
 static void init_aarch64_has_sme(void) {
   __aarch64_has_sme_and_tpidr2_el0 = has_sme();
 }
+
+#include "../cpu_model/AArch64CPUFeatures.inc"
+_Static_assert(FEAT_SVE== 30, "sme-abi.S assumes FEAT_SVE = 30");
+_Static_assert(FEAT_SME== 42, "sme-abi.S assumes FEAT_SME = 42");
+_Static_assert(FEAT_SME2 == 57, "sme-abi.S assumes FEAT_SME2 = 57");
