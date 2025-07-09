@@ -1565,14 +1565,22 @@ public:
   }
 
   InstructionCost getInterleavedMemoryOpCost(
-      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false) const override {
-
-    // We cannot scalarize scalable vectors, so return Invalid.
-    if (isa<ScalableVectorType>(VecTy))
+      unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+      ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind, bool UseMaskForCond = false,
+      bool UseMaskForGaps = false) const override {
+    assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+           "EltTy and EC can't both be scalable");
+    // Interleaved memory costs for vectors of vectors as used with
+    // re-vectorization are not yet supported.
+    if (isa<VectorType>(EltTy))
       return InstructionCost::getInvalid();
 
+    // We cannot scalarize scalable vectors, so return Invalid.
+    if (EC.isScalable())
+      return InstructionCost::getInvalid();
+
+    Type *VecTy = VectorType::get(EltTy, EC);
     auto *VT = cast<FixedVectorType>(VecTy);
 
     unsigned NumElts = VT->getNumElements();

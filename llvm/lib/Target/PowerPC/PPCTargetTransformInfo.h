@@ -138,9 +138,10 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost getInterleavedMemoryOpCost(
-      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
+      unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+      ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind, bool UseMaskForCond = false,
+      bool UseMaskForGaps = false) const override;
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;

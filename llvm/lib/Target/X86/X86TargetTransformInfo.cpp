@@ -6772,10 +6772,19 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
 }
 
 InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *BaseTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
-  auto *VecTy = cast<FixedVectorType>(BaseTy);
+    unsigned Opcode, Type *BaseTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  assert(!(isa<ScalableVectorType>(BaseTy) && EC.isScalable()) &&
+         "BaseTy and EC can't both be scalable");
+
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(BaseTy))
+    return InstructionCost::getInvalid();
+
+  auto *VecTy = FixedVectorType::get(BaseTy, EC.getFixedValue());
 
   auto isSupportedOnAVX512 = [&](Type *VecTy) {
     Type *EltTy = cast<VectorType>(VecTy)->getElementType();
@@ -6794,9 +6803,9 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
         AddressSpace, CostKind, UseMaskForCond, UseMaskForGaps);
 
   if (UseMaskForCond || UseMaskForGaps)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, CostKind,
-                                             UseMaskForCond, UseMaskForGaps);
+    return BaseT::getInterleavedMemoryOpCost(
+        Opcode, BaseTy, EC, Factor, Indices, Alignment, AddressSpace, CostKind,
+        UseMaskForCond, UseMaskForGaps);
 
   // Get estimation for interleaved load/store operations for SSE-AVX2.
   // As opposed to AVX-512, SSE-AVX2 do not have generic shuffles that allow
@@ -6813,11 +6822,11 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   // the VF=2, while v2i128 is an unsupported MVT vector type
   // (see MachineValueType.h::getVectorVT()).
   if (!LegalVT.isVector())
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, CostKind);
+    return BaseT::getInterleavedMemoryOpCost(
+        Opcode, BaseTy, EC, Factor, Indices, Alignment, AddressSpace, CostKind);
 
-  unsigned VF = VecTy->getNumElements() / Factor;
-  Type *ScalarTy = VecTy->getElementType();
+  unsigned VF = EC.getFixedValue() / Factor;
+  Type *ScalarTy = BaseTy;
   // Deduplicate entries, model floats/pointers as appropriately-sized integers.
   if (!ScalarTy->isIntegerTy())
     ScalarTy =
@@ -6831,8 +6840,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   auto *VT = FixedVectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
   if (!ETy.isSimple())
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, CostKind);
+    return BaseT::getInterleavedMemoryOpCost(
+        Opcode, BaseTy, EC, Factor, Indices, Alignment, AddressSpace, CostKind);
 
   // TODO: Complete for other data-types and strides.
   // Each combination of Stride, element bit width and VF results in a different
@@ -7081,7 +7090,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
         return MemOpCosts + Entry->Cost;
   }
 
-  return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+  return BaseT::getInterleavedMemoryOpCost(Opcode, BaseTy, EC, Factor, Indices,
                                            Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);
 }

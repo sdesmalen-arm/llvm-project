@@ -1392,15 +1392,23 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 // roughly the same but bases the computations on vector permutations
 // instead.
 InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+         "EltTy and EC can't both be scalable");
+
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(EltTy))
+    return InstructionCost::getInvalid();
+
   if (UseMaskForCond || UseMaskForGaps)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+    return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,
                                              Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
-  assert(isa<VectorType>(VecTy) &&
-         "Expect a vector type for interleaved memory op");
+  auto *VecTy = VectorType::get(EltTy, EC);
 
   unsigned NumElts = cast<FixedVectorType>(VecTy)->getNumElements();
   assert(Factor > 1 && NumElts % Factor == 0 && "Invalid interleave factor");

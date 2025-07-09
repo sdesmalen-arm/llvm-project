@@ -243,15 +243,24 @@ InstructionCost HexagonTTIImpl::getGatherScatterOpCost(
 }
 
 InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+         "EltTy and EC can't both be scalable");
+
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(EltTy))
+    return InstructionCost::getInvalid();
+
   if (Indices.size() != Factor || UseMaskForCond || UseMaskForGaps)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind,
+    return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,
+                                             Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
-  return getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
+  return getMemoryOpCost(Opcode, VectorType::get(EltTy, EC), Alignment,
+                         AddressSpace, CostKind);
 }
 
 InstructionCost HexagonTTIImpl::getCmpSelInstrCost(

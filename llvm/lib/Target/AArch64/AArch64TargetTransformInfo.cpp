@@ -4585,32 +4585,37 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
 }
 
 InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+         "EltTy and EC can't both be scalable");
   assert(Factor >= 2 && "Invalid interleave factor");
-  auto *VecVTy = cast<VectorType>(VecTy);
 
-  if (VecTy->isScalableTy() && !ST->hasSVE())
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(EltTy))
+    return InstructionCost::getInvalid();
+
+  if (EC.isScalable() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
   // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
   // only have lowering for power-of-2 factors.
   // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
   // InterleavedAccessPass for ld3/st3
-  if (VecTy->isScalableTy() && !isPowerOf2_32(Factor))
+  if (EC.isScalable() && !isPowerOf2_32(Factor))
     return InstructionCost::getInvalid();
 
   // Vectorization for masked interleaved accesses is only enabled for scalable
   // VF.
-  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))
+  if (EC.isFixed() && (UseMaskForCond || UseMaskForGaps))
     return InstructionCost::getInvalid();
 
   if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
-    auto *SubVecTy =
-        VectorType::get(VecVTy->getElementType(),
-                        VecVTy->getElementCount().divideCoefficientBy(Factor));
+    unsigned MinElts = EC.getKnownMinValue();
+    auto *SubVecTy = VectorType::get(EltTy, EC.divideCoefficientBy(Factor));
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
@@ -4621,7 +4626,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
   }
 
-  return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+  return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,
                                            Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);
 }

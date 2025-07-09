@@ -5414,7 +5414,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
       (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
-      InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
+      InsertPos->getOpcode(), WideVecTy->getElementType(),
+      WideVecTy->getElementCount(), Group->getFactor(), Indices,
       Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
       UseMaskForGaps);
 

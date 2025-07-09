@@ -5998,7 +5998,9 @@ static bool isMaskedLoadCompress(
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
-                              Instruction::Load, AlignedLoadVecTy,
+                              Instruction::Load,
+                              AlignedLoadVecTy->getElementType(),
+                              AlignedLoadVecTy->getElementCount(),
                               CompressMask[1], {}, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (InterleavedCost < GatherCost) {
@@ -13566,7 +13568,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::Vectorize:
         if (unsigned Factor = E->getInterleaveFactor()) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, VecTy, Factor, {}, LI0->getAlign(),
+              Instruction::Load, VecTy->getElementType(),
+              VecTy->getElementCount(), Factor, {}, LI0->getAlign(),
               LI0->getPointerAddressSpace(), CostKind);
 
         } else {
@@ -13607,7 +13610,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, LoadVecTy, InterleaveFactor, {},
+              Instruction::Load, LoadVecTy->getElementType(),
+              LoadVecTy->getElementCount(), InterleaveFactor, {},
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
           VecLdCost = TTI->getMaskedMemoryOpCost(
@@ -13682,7 +13686,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                  "No reused shuffles expected");
           CommonCost = 0;
           VecStCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Store, VecTy, Factor, {}, BaseSI->getAlign(),
+              Instruction::Store, VecTy->getElementType(),
+              VecTy->getElementCount(), Factor, {}, BaseSI->getAlign(),
               BaseSI->getPointerAddressSpace(), CostKind);
         } else {
           TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));

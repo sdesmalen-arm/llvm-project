@@ -975,9 +975,19 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
 }
 
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+         "EltTy and EC can't both be scalable");
+
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(EltTy))
+    return InstructionCost::getInvalid();
+
+  auto *VecTy = VectorType::get(EltTy, EC);
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -1057,7 +1067,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   // %interleaved.vec = shufflevector %13, poison, <12 x i32> <interleave mask>
   // store <12 x i32> %interleaved.vec, ptr %10, align 4
   if (Factor != 2)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+    return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,
                                              Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
 

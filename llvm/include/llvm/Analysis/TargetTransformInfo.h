@@ -1588,7 +1588,11 @@ public:
 
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
-  /// \p VecTy is the vector type of the interleaved access.
+  /// \p EltTy is the element type of the interleaved access,
+  ///    and can be either a vector (for re-vectorized code)
+  ///    or a scalar (for regular interleaving).
+  /// \p EC is the element count of the type used for the interleaved access.
+  /// \p EltTy and \p EC cannot both be scalable.
   /// \p Factor is the interleave factor
   /// \p Indices is the indices for interleaved load members (as interleaved
   ///    load allows gaps)
@@ -1597,8 +1601,8 @@ public:
   /// \p UseMaskForCond indicates if the memory access is predicated.
   /// \p UseMaskForGaps indicates if gaps should be masked.
   LLVM_ABI InstructionCost getInterleavedMemoryOpCost(
-      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace,
+      unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+      ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 

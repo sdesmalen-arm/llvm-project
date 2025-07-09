@@ -1207,11 +1207,12 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   unsigned ElementsPerSVI =
       cast<FixedVectorType>(InterleavedLoad.front().SVI->getType())
           ->getNumElements();
-  FixedVectorType *ILTy = FixedVectorType::get(ETy, Factor * ElementsPerSVI);
+  ElementCount EC = ElementCount::getFixed(Factor * ElementsPerSVI);
+  FixedVectorType *ILTy = FixedVectorType::get(ETy, EC.getFixedValue());
 
   auto Indices = llvm::to_vector<4>(llvm::seq<unsigned>(0, Factor));
   InterleavedCost = TTI.getInterleavedMemoryOpCost(
-      Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlign(),
+      Instruction::Load, ETy, EC, Factor, Indices, InsertionPoint->getAlign(),
       InsertionPoint->getPointerAddressSpace(), CostKind);
 
   if (InterleavedCost >= InstructionCost) {

@@ -857,21 +857,28 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+         "EltTy and EC can't both be scalable");
+
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(EltTy))
+    return InstructionCost::getInvalid();
+
+  auto *VecTy = VectorType::get(EltTy, EC);
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Opcode, VecTy, nullptr);
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
 
   if (UseMaskForCond || UseMaskForGaps)
-    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+    return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,
                                              Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
-
-  assert(isa<VectorType>(VecTy) &&
-         "Expect a vector type for interleaved memory op");
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);

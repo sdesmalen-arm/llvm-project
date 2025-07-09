@@ -392,9 +392,10 @@ public:
   bool enableOrderedReductions() const override { return true; }
 
   InstructionCost getInterleavedMemoryOpCost(
-      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
+      unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+      ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind, bool UseMaskForCond = false,
+      bool UseMaskForGaps = false) const override;
 
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I,

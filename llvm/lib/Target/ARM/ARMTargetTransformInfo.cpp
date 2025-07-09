@@ -1618,20 +1618,29 @@ ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
 }
 
 InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
   assert(Factor >= 2 && "Invalid interleave factor");
-  assert(isa<VectorType>(VecTy) && "Expect a vector type");
+
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+         "EltTy and EC can't both be scalable");
+
+  // Interleaved memory costs for vectors of vectors as used with
+  // re-vectorization are not yet supported.
+  if (isa<VectorType>(EltTy))
+    return InstructionCost::getInvalid();
+
+  assert(EC.getFixedValue() > 1 && "Expect a vector type");
 
   // vldN/vstN doesn't support vector types of i64/f64 element.
-  bool EltIs64Bits = DL.getTypeSizeInBits(VecTy->getScalarType()) == 64;
+  bool EltIs64Bits = DL.getTypeSizeInBits(EltTy) == 64;
 
   if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits &&
       !UseMaskForCond && !UseMaskForGaps) {
-    unsigned NumElts = cast<FixedVectorType>(VecTy)->getNumElements();
-    auto *SubVecTy =
-        FixedVectorType::get(VecTy->getScalarType(), NumElts / Factor);
+    unsigned NumElts = EC.getFixedValue();
+    auto *SubVecTy = FixedVectorType::get(EltTy, NumElts / Factor);
 
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
@@ -1648,12 +1657,12 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
     // promoted differently). The cost of 2 here is then a load and vrev or
     // vmovn.
     if (ST->hasMVEIntegerOps() && Factor == 2 && NumElts / Factor > 2 &&
-        VecTy->isIntOrIntVectorTy() &&
+        EltTy->isIntOrIntVectorTy() &&
         DL.getTypeSizeInBits(SubVecTy).getFixedValue() <= 64)
       return 2 * BaseCost;
   }
 
-  return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+  return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,
                                            Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);
 }

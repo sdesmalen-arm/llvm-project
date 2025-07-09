@@ -3667,8 +3667,9 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
 
   // Calculate the cost of the whole interleaved group.
   InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
-      InsertPos->getOpcode(), WideVecTy, IG->getFactor(), Indices,
-      IG->getAlign(), AS, Ctx.CostKind, getMask(), NeedsMaskForGaps);
+      InsertPos->getOpcode(), WideVecTy->getElementType(),
+      WideVecTy->getElementCount(), IG->getFactor(), Indices, IG->getAlign(),
+      AS, Ctx.CostKind, getMask(), NeedsMaskForGaps);
 
   if (!IG->isReverse())
     return Cost;

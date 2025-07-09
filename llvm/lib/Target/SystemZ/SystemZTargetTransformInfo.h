@@ -134,9 +134,10 @@ public:
       const Instruction *I = nullptr) const override;
 
   InstructionCost getInterleavedMemoryOpCost(
-      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
+      unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+      ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind, bool UseMaskForCond = false,
+      bool UseMaskForGaps = false) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

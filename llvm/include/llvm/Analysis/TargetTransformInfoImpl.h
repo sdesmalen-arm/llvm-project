@@ -865,10 +865,12 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  virtual InstructionCost getInterleavedMemoryOpCost(
-      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond, bool UseMaskForGaps) const {
+  virtual InstructionCost
+  getInterleavedMemoryOpCost(unsigned Opcode, Type *EltTy, ElementCount EC,
+                             unsigned Factor, ArrayRef<unsigned> Indices,
+                             Align Alignment, unsigned AddressSpace,
+                             TTI::TargetCostKind CostKind, bool UseMaskForCond,
+                             bool UseMaskForGaps) const {
     return 1;
   }
 

@@ -1201,11 +1201,12 @@ InstructionCost TargetTransformInfo::getStridedMemoryOpCost(
 }
 
 InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) const {
+    unsigned Opcode, Type *EltTy, ElementCount EC, unsigned Factor,
+    ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
   InstructionCost Cost = TTIImpl->getInterleavedMemoryOpCost(
-      Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, CostKind,
+      Opcode, EltTy, EC, Factor, Indices, Alignment, AddressSpace, CostKind,
       UseMaskForCond, UseMaskForGaps);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
