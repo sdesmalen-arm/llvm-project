@@ -4615,15 +4615,16 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
 
   if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     unsigned MinElts = EC.getKnownMinValue();
-    auto *SubVecTy = VectorType::get(EltTy, EC.divideCoefficientBy(Factor));
+    ElementCount SubEC = EC.divideCoefficientBy(Factor);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
     if (MinElts % Factor == 0 &&
-        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+        TLI->isLegalInterleavedAccessType(EltTy, SubEC, DL, UseScalable))
+      return Factor * TLI->getNumInterleavedAccesses(
+                          VectorType::get(EltTy, SubEC), DL, UseScalable);
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, EltTy, EC, Factor, Indices,

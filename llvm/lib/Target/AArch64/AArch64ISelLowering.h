@@ -456,10 +456,11 @@ public:
   /// Returns the size of the platform's va_list object.
   unsigned getVaListSizeInBits(const DataLayout &DL) const override;
 
-  /// Returns true if \p VecTy is a legal interleaved access type. This
-  /// function checks the vector element type and the overall width of the
-  /// vector.
-  bool isLegalInterleavedAccessType(VectorType *VecTy, const DataLayout &DL,
+  /// Returns true if a vector with \p EC elements of type \p EltTy is a legal
+  /// interleaved access type. This function checks the element type and the
+  /// overall width of the vector.
+  bool isLegalInterleavedAccessType(Type *EltTy, ElementCount EC,
+                                    const DataLayout &DL,
                                     bool &UseScalable) const;
 
   /// Returns the number of interleaved accesses that will be generated when

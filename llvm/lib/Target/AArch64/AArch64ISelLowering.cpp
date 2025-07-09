@@ -17005,20 +17005,19 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
 }
 
 bool AArch64TargetLowering::isLegalInterleavedAccessType(
-    VectorType *VecTy, const DataLayout &DL, bool &UseScalable) const {
-  unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
-  auto EC = VecTy->getElementCount();
+    Type *EltTy, ElementCount EC, const DataLayout &DL,
+    bool &UseScalable) const {
+  unsigned ElSize = DL.getTypeSizeInBits(EltTy);
   unsigned MinElts = EC.getKnownMinValue();
 
   UseScalable = false;
 
-  if (isa<FixedVectorType>(VecTy) && !Subtarget->isNeonAvailable() &&
+  if (EC.isFixed() && !Subtarget->isNeonAvailable() &&
       (!Subtarget->useSVEForFixedLengthVectors() ||
        !getSVEPredPatternFromNumElements(MinElts)))
     return false;
 
-  if (isa<ScalableVectorType>(VecTy) &&
-      !Subtarget->isSVEorStreamingSVEAvailable())
+  if (EC.isScalable() && !Subtarget->isSVEorStreamingSVEAvailable())
     return false;
 
   // Ensure the number of vector elements is greater than 1.
@@ -17034,7 +17033,7 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
     return isPowerOf2_32(MinElts) && (MinElts * ElSize) % 128 == 0;
   }
 
-  unsigned VecSize = DL.getTypeSizeInBits(VecTy);
+  unsigned VecSize = DL.getTypeSizeInBits(EltTy) * EC.getFixedValue();
   if (Subtarget->useSVEForFixedLengthVectors()) {
     unsigned MinSVEVectorSize =
         std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
@@ -17141,7 +17140,8 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
   bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy->getElementType(),
+                                    VTy->getElementCount(), DL, UseScalable))
     return false;
 
   // Check if the interleave is a zext(shuffle), that can be better optimized
@@ -17326,7 +17326,8 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(EltTy, ElementCount::getFixed(LaneLen), DL,
+                                    UseScalable))
     return false;
 
   unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
@@ -17467,7 +17468,8 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy->getElementType(),
+                                    VTy->getElementCount(), DL, UseScalable))
     return false;
 
   // TODO: Add support for using SVE instructions with fixed types later, using
@@ -17541,7 +17543,8 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
   const DataLayout &DL = SI->getModule()->getDataLayout();
 
   bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy->getElementType(),
+                                    VTy->getElementCount(), DL, UseScalable))
     return false;
 
   // TODO: Add support for using SVE instructions with fixed types later, using
