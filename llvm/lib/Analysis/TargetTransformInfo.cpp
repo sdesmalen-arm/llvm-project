@@ -532,9 +532,11 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(
-    VectorType *VTy, unsigned Factor, Align Alignment,
+    Type *EltTy, ElementCount EC, unsigned Factor, Align Alignment,
     unsigned AddrSpace) const {
-  return TTIImpl->isLegalInterleavedAccessType(VTy, Factor, Alignment,
+  assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+       "EltTy and EC can't both be scalable");
+  return TTIImpl->isLegalInterleavedAccessType(EltTy, EC, Factor, Alignment,
                                                AddrSpace);
 }
 

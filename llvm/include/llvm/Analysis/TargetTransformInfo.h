@@ -843,11 +843,11 @@ public:
   /// Return true if the target supports strided load.
   LLVM_ABI bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
-  /// Return true is the target supports interleaved access for the given vector
-  /// type \p VTy, interleave factor \p Factor, alignment \p Alignment and
-  /// address space \p AddrSpace.
-  LLVM_ABI bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
-                                             Align Alignment,
+  /// Return true if the target supports interleaved access for a vector
+  /// type with \p EC number of elements of type \p EltTy, an interleave factor
+  /// \p Factor, alignment \p Alignment and address space \p AddrSpace.
+  LLVM_ABI bool isLegalInterleavedAccessType(Type *EltTy, ElementCount EC,
+                                             unsigned Factor, Align Alignment,
                                              unsigned AddrSpace) const;
 
   // Return true if the target supports masked vector histograms.

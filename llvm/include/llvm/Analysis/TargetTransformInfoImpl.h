@@ -374,8 +374,8 @@ public:
     return false;
   }
 
-  virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
-                                            Align Alignment,
+  virtual bool isLegalInterleavedAccessType(Type *EltTy, ElementCount EC,
+                                            unsigned Factor, Align Alignment,
                                             unsigned AddrSpace) const {
     return false;
   }

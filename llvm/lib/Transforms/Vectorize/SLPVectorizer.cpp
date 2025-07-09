@@ -5992,8 +5992,9 @@ static bool isMaskedLoadCompress(
                                      DL, cast<LoadInst>(VL.back()), &AC, &DT,
                                      &TLI))
       AlignedLoadVecTy = LoadVecTy;
-    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
-                                         CommonAlignment,
+    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy->getElementType(),
+                                         AlignedLoadVecTy->getElementCount(),
+                                         CompressMask[1], CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
@@ -8597,7 +8598,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 // Segmented load detected - vectorize at maximum vector factor.
                 if (InterleaveFactor <= Slice.size() &&
                     TTI.isLegalInterleavedAccessType(
-                        getWidenedType(Slice.front()->getType(), VF),
+                        Slice.front()->getType(), ElementCount::getFixed(VF),
                         InterleaveFactor,
                         cast<LoadInst>(Slice.front())->getAlign(),
                         cast<LoadInst>(Slice.front())
@@ -11888,8 +11889,8 @@ void BoUpSLP::transformNodes() {
             if (ShuffleVectorInst::isInterleaveMask(
                     Mask, Factor, VecTy->getElementCount().getFixedValue()) &&
                 TTI.isLegalInterleavedAccessType(
-                    VecTy, Factor, BaseSI->getAlign(),
-                    BaseSI->getPointerAddressSpace()))
+                    VecTy->getElementType(), VecTy->getElementCount(), Factor,
+                    BaseSI->getAlign(), BaseSI->getPointerAddressSpace()))
               return Factor;
           }
 

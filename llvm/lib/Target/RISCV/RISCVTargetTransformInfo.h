@@ -324,11 +324,15 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
-  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
-                                    Align Alignment,
+  bool isLegalInterleavedAccessType(Type *EltTy, ElementCount EC,
+                                    unsigned Factor, Align Alignment,
                                     unsigned AddrSpace) const override {
-    return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
-                                             DL);
+    assert(!(isa<ScalableVectorType>(EltTy) && EC.isScalable()) &&
+       "EltTy and EC can't both be scalable");
+    if (isa<VectorType>(EltTy))
+      return false;
+    return TLI->isLegalInterleavedAccessType(VectorType::get(EltTy, EC), Factor,
+                                             Alignment, AddrSpace, DL);
   }
 
   bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) const override;
